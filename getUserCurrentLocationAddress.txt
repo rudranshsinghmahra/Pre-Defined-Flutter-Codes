@@ -1,0 +1,44 @@
+INSTALL 
+1. flutter pub add location
+2. flutter pub add geocoding
+
+Future<String> getUserAddress() async {
+
+    // Initialize location service and permissions
+    Location location = Location();
+    bool serviceEnabled;
+    PermissionStatus permissionGranted;
+
+
+    //Checking whether location service enabled or not
+    serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        return 'Location service is not enabled.';
+      }
+    }
+
+    //Checking whether location permission is allowed or not
+    permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        return 'Location permissions are not granted.';
+      }
+    }
+
+    // Get current user location
+    LocationData currentLocation = await location.getLocation();
+
+    // Use geocoding to get the address
+    List<geocoding.Placemark> placeMarks =
+        await geocoding.placemarkFromCoordinates(
+            currentLocation.latitude!.toDouble(),
+            currentLocation.longitude!.toDouble());
+
+    geocoding.Placemark firstPlaceMarks = placeMarks[0];
+
+    // Return the formatted address
+    return '${firstPlaceMarks.name}, ${firstPlaceMarks.subLocality}, ${firstPlaceMarks.locality}, ${firstPlaceMarks.administrativeArea} - ${firstPlaceMarks.postalCode}';
+  }

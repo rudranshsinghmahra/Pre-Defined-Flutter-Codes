@@ -1,0 +1,28 @@
+INSTALL
+1. flutter pub add geolocator
+
+Future<Position?> getMyCurrentPosition() async {
+    Position? position;
+    LocationPermission permission;
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      permissionAllowed = false;
+      showAlert("Location Permission is Denied. Allow to use app");
+    } else if (permission == LocationPermission.deniedForever) {
+      permissionAllowed = false;
+      showAlert("Location Permission is Denied Forever. Enable in Settings");
+    } else {
+      position = await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      permissionAllowed = true;
+      latitude = position.latitude;
+      longitude = position.longitude;
+      notifyListeners();
+
+      List<geocoding.Placemark> placemarks =
+          await geocoding.placemarkFromCoordinates(latitude, longitude);
+      selectedAddress = placemarks.first;
+    }
+    return position;
+  }

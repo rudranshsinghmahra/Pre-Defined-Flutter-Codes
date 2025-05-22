@@ -1,0 +1,78 @@
+/// Uploading MultipartFile i.e images, documents, etc (NOTE: Only for uploading single file)
+
+  Future<dynamic> uploadMultipartFile({
+    required Uri url,
+    required File file,
+    required String fileFieldName, // e.g. "image", "file", "profilePic"
+    Map<String, String>? fields,
+    String? filename,
+  }) async {
+    try {
+      final request = MultipartRequest('POST', url)
+        ..headers.addAll({
+          "Authorization": "Bearer $apiKey",
+          "Content-Type": "multipart/form-data"
+        });
+
+      // Add fields (optional form fields)
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      // Add file
+      request.files.add(
+        await MultipartFile.fromPath(
+          fileFieldName,
+          file.path,
+          filename: filename ?? file.path.split('/').last,
+        ),
+      );
+
+      // Send the request
+      final streamedResponse = await request.send().timeout(timeoutDuration);
+      final response = await Response.fromStream(streamedResponse);
+
+      // Handle the response
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        print("Multipart upload failed: ${response.statusCode}");
+        throw FetchDataException("Upload failed with status ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Upload error: $e");
+      throw FetchDataException("Error uploading file");
+    }
+  }
+
+
+/// Class CustomException
+
+class CustomException implements Exception {
+  final _message;
+  final _prefix;
+
+  CustomException([this._message, this._prefix]);
+
+  @override
+  String toString() {
+    return "$_prefix$_message";
+  }
+}
+
+class FetchDataException extends CustomException {
+  FetchDataException([message])
+      : super(message, "Error During Communication: ");
+}
+
+class BadRequestException extends CustomException {
+  BadRequestException([message]) : super(message, "Invalid Request: ");
+}
+
+class UnauthorisedException extends CustomException {
+  UnauthorisedException([message]) : super(message, "Unauthorised: ");
+}
+
+class InvalidInputException extends CustomException {
+  InvalidInputException([message]) : super(message, "Invalid Input: ");
+}

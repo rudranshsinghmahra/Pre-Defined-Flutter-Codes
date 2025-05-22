@@ -1,0 +1,19 @@
+Future<String?> uploadImageToStorage(
+      XFile? image, String uploadFolderName) async {
+    try {
+      if (image != null) {
+        final Reference storageRef = FirebaseStorage.instance.ref().child(
+              '$uploadFolderName/${DateTime.now().millisecondsSinceEpoch}.jpg',
+            );
+
+        await storageRef.putFile(File(image.path));
+
+        final String downloadURL = await storageRef.getDownloadURL();
+
+        return downloadURL;
+      }
+    } catch (e) {
+      print("Error uploading image to Firebase Storage: $e");
+    }
+    return null;
+  }

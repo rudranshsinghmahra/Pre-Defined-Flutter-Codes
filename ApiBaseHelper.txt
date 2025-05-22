@@ -1,0 +1,178 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart';
+
+import '../Model/ErrorModel.dart';
+import 'Constant.dart';
+import 'custom_exception.dart';
+
+class ApiBaseHelper {
+  static const Duration timeoutDuration = Duration(seconds: 50);
+
+  /// GET API CALL
+  Future<dynamic> getApiCall(Uri endPoint, Map<String, Object>? param) async {
+    dynamic responseJson;
+    try {
+      final finalEndpoint =
+          param != null ? endPoint.replace(queryParameters: param) : endPoint;
+
+      final response = await get(finalEndpoint, headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $apiKey"
+      }).timeout(timeoutDuration);
+
+      responseJson = _response(response);
+    } catch (e) {
+      print("GET Error: $e");
+      throw FetchDataException('GET request failed');
+    }
+    return responseJson;
+  }
+
+  /// POST API CALL
+  Future<dynamic> postAPICall(Uri apiEndPoint, Map param) async {
+    dynamic responseJson;
+    try {
+      final response = await post(
+        apiEndPoint,
+        body: param.isNotEmpty ? jsonEncode(param) : null,
+        headers: {
+          "Authorization": 'Bearer $apiKey',
+          "Content-Type": "application/json"
+        },
+      ).timeout(timeoutDuration);
+
+      responseJson = _response(response);
+      print("POST Response: $responseJson");
+    } catch (e) {
+      print("POST Error: $e");
+      throw FetchDataException('POST request failed');
+    }
+    return responseJson;
+  }
+
+  /// PUT API CALL
+  Future<dynamic> putApiCall(Uri apiEndPoint, Map param) async {
+    dynamic responseJson;
+    try {
+      final response = await put(
+        apiEndPoint,
+        body: param.isNotEmpty ? jsonEncode(param) : null,
+        headers: {
+          "Authorization": 'Bearer $apiKey',
+          "Content-Type": "application/json"
+        },
+      ).timeout(timeoutDuration);
+
+      responseJson = _response(response);
+      print("PUT Response: $responseJson");
+    } catch (e) {
+      print("PUT Error: $e");
+      throw FetchDataException('PUT request failed');
+    }
+    return responseJson;
+  }
+
+  /// DELETE API CALL
+  Future<dynamic> deleteApiCall(Uri apiEndPoint,
+      {Map<String, Object>? param}) async {
+    dynamic responseJson;
+    try {
+      final finalEndpoint = param != null
+          ? apiEndPoint.replace(queryParameters: param)
+          : apiEndPoint;
+
+      final response = await delete(
+        finalEndpoint,
+        headers: {
+          "Authorization": 'Bearer $apiKey',
+          "Content-Type": "application/json"
+        },
+      ).timeout(timeoutDuration);
+
+      responseJson = _response(response);
+      print("DELETE Response: $responseJson");
+    } catch (e) {
+      print("DELETE Error: $e");
+      throw FetchDataException('DELETE request failed');
+    }
+    return responseJson;
+  }
+
+  /// PATCH API CALL (Optional)
+  Future<dynamic> patchApiCall(Uri apiEndPoint, Map param) async {
+    dynamic responseJson;
+    try {
+      final response = await patch(
+        apiEndPoint,
+        body: param.isNotEmpty ? jsonEncode(param) : null,
+        headers: {
+          "Authorization": 'Bearer $apiKey',
+          "Content-Type": "application/json"
+        },
+      ).timeout(timeoutDuration);
+
+      responseJson = _response(response);
+      print("PATCH Response: $responseJson");
+    } catch (e) {
+      print("PATCH Error: $e");
+      throw FetchDataException('PATCH request failed');
+    }
+    return responseJson;
+  }
+
+  /// Common Response Handler
+  dynamic _response(Response response) {
+    switch (response.statusCode) {
+      case 200:
+      case 201:
+        return json.decode(response.body.toString());
+      case 400:
+        var error = ErrorModel.fromJson(json.decode(response.body));
+        throw BadRequestException(error.error);
+      case 401:
+      case 403:
+        var error = ErrorModel.fromJson(json.decode(response.body));
+        throw UnauthorisedException(error.error);
+      case 500:
+      default:
+        throw FetchDataException(
+          'Error occurred while communicating with Server: ${response.statusCode}',
+        );
+    }
+  }
+}
+
+
+/// Class CustomException
+
+class CustomException implements Exception {
+  final _message;
+  final _prefix;
+
+  CustomException([this._message, this._prefix]);
+
+  @override
+  String toString() {
+    return "$_prefix$_message";
+  }
+}
+
+class FetchDataException extends CustomException {
+  FetchDataException([message])
+      : super(message, "Error During Communication: ");
+}
+
+class BadRequestException extends CustomException {
+  BadRequestException([message]) : super(message, "Invalid Request: ");
+}
+
+class UnauthorisedException extends CustomException {
+  UnauthorisedException([message]) : super(message, "Unauthorised: ");
+}
+
+class InvalidInputException extends CustomException {
+  InvalidInputException([message]) : super(message, "Invalid Input: ");
+}
+
